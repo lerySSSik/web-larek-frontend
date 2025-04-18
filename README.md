@@ -251,25 +251,6 @@
         * Обновляет список товаров в интерфейсе;
         * Синхронизируется с системой событий;
 
-### Класс Form.
-Базовый компонент для работы с HTML-формами, наследуемый от Component.
-
-1. Конструктор :
-    constructor(
-        protected container: HTMLFormElement, //элемент <form>, представляющий саму форму
-        protected events: IEvents //система событий для обработки действий
-    )
-
-2. Основные методы :
-    - onInputChange(field: keyof T, value: string): void :
-        * Обработчик изменений полей ввода;
-    - render(state: Partial<T> & IFormValidator): void :
-        * Комплексное обновление формы;
-    - set valid(isValid: boolean): void :
-        * Управление доступностью формы
-    - set errors(messages: string): void :
-        * Отображение ошибок валидации;   
-
 ### Класс Success.
 Компонент для отображения экрана успешного завершения заказа.
 
@@ -286,7 +267,36 @@
     - set onClose(callback: () => void) :
         * Настраивает обработчик закрытия;
 
-### Слой коммуникации.
+### Класс OrderForm.
+1. Поля :
+    - form: HTMLFormElement - форма заказа;
+    - paymentButtons: HTMLButtonElement[] - кнопки выбора способы оплаты;
+    - addressInput: HTMLInputElement — поле ввода адреса;
+    - submitButton: HTMLButtonElement — кнопка отправки заказа
+
+2. Методы:
+    - render(data: OrderPayment) — отрисовывает форму с переданными данными;
+    - setErrors(errors: ValidationErrors) — отображает ошибки валидации
+
+3. Обработчики событий :
+    - click на paymentButtons — выбор способа оплаты;
+    - input на addressInput — ввод адреса;
+    - submit формы — отправка данных заказа;
+
+### Класс ContactsForm.
+1. Поля:
+    - form: HTMLFormElement — форма контактов;
+    - emailInput: HTMLInputElement — поле ввода email;
+    - phoneInput: HTMLInputElement — поле ввода телефона;
+    - submitButton: HTMLButtonElement — кнопка отправки;
+2. Методы :
+    - render(data: Contacts) — отображает форму с переданными контактными данными;
+    - setErrors(errors: ValidationErrors) — выводит ошибки валидации;
+3. Обработчики событий :
+    - input на полях формы (emailInput, phoneInput) — обработка вводимых данных
+    - submit формы — отправка данных;
+
+## Слой коммуникации.
 ### Класс AppApi.
 Специализированный API-клиент для работы с backend-сервисом, расширяющий базовый функционал класса Api. Обеспечивает взаимодействие с API, включая работу с товарами и оформление заказов.
 
@@ -308,6 +318,16 @@
         * Отправляет данные на сервер;
         * Обрабатывает различные статусы ответа;
     
+
+## Взаимодействие компонентов.
+   - products:changed - обновление каталога;
+   - preview:changed - просмотр товара;
+   - modal:open/close - открытие/закрытие модального окна;
+   - basket:changed - изменение корзины:
+   - product:select, basket:open — действия;
+   - order:changed — изменение данных заказа;
+   - formErrors:changed — изменение ошибок валидации;
+   
 ## Установка и запуск
 Для установки и запуска проекта необходимо выполнить команды
 
