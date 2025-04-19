@@ -20,7 +20,7 @@
    - ProductModel — отвечает за управление каталогом товаров;
    - BasketModel — отвечает за управление корзиной покупок;
 
-2. Представления (View) — визуализация пользовательского интерфейса:
+2. Представления (View) — визуализация пользовёательского интерфейса:
    - MainPageView — главная страница приложения с галереей товаров, где пользователи могут просматривать и выбирать интересующие их продукты;
    - ProductCard — универсальный компонент для отображения карточек товаров;
    - BasketView — отображает содержимое корзины покупок, включая список товаров, их количество и общую стоимость, а также предоставляет возможность оформления заказа;
@@ -230,7 +230,7 @@
         * Комплексное обновление модального окна;
 
 ### Класс Basket. 
-Компонент управления корзиной товаров(отображение списка добавленных товаров, расчет и отображение общей стоимости, контроль состояния кнопки оформления заказа, взаимодействие с другими компонентами через систему событий)
+Компонент управления корзиной товаров(отображение списка добавленных товаров, взаимодействие с другими компонентами через систему событий)
 
 1. Конструктор :
     constructor(
@@ -240,7 +240,6 @@
 
 2. Основные методы :
     - updateButtonState(isActive: boolean): void :
-        * Контролирует доступность кнопки оформления заказа;
         * Автоматически вызывается при изменении суммы заказа;
 
 3. Сеттеры :
@@ -328,6 +327,64 @@
    - order:changed — изменение данных заказа;
    - formErrors:changed — изменение ошибок валидации;
    
+
+## Типы данных
+
+### Карточки
+  interface IProductItem {
+  id: string;
+  name: string;
+  price: number;
+  description: string;
+  category: string;
+  image: string;
+}
+
+### Заказ
+  interface IOrder {
+  payment: string;
+  address: string;
+  email: string;
+  phone: string;
+}
+
+### Подтверждение заказа
+  interface OrderConfirmation {
+  id: string;
+  total: number;
+}
+
+### Данные карточки 
+  interface IProductData {
+  cards: IProductItem[];
+  preview: string | null;
+}
+
+### Карточка на главной странице 
+    type CatalogItem = Omit<ProductItem, 'description'>;
+
+### Карточка в корзине 
+    type BasketItem = Pick<IProductItem, 'id' | 'name' | 'price'>;
+
+### Данные в корзине
+   type BasketItem {
+   id: string;
+   title: string;
+   price: number | null;
+}
+
+### Способ оплаты 
+    type Payment = 'card' | 'cash' | '';
+
+### Форма оплаты и адреса
+    type OrderPayment = Pick<IOrder, 'payment' | 'address'>;
+
+### Контактная информация 
+    type Contacts = Pick<IOrder, 'email' | 'phone'>;
+
+### Валидация
+    type ValidationErrors = Partial<Record<keyof IOrder, string>>;
+
 ## Установка и запуск
 Для установки и запуска проекта необходимо выполнить команды
 
