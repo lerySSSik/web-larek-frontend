@@ -1,4 +1,4 @@
-# Проектная работа "Веб-ларек"
+# Проектная работа "Web-larek"
 Интернет-магазин "Web-larek" для веб-разработчиков, где можно найти всё необходимое для успешной работы. Удобный каталог с подробными описаниями товаров, возможность добавления товаров в корзину и оформления заказов в пару кликов. Кроме того, вы можете детально ознакомиться с описанием каждого товара в карточке, чтобы выбрать именно то, что вам нужно.
 
 ## Оглавление
@@ -18,12 +18,18 @@
 
 1. Модели (Model) — управление данными и бизнес-логикой:
    - ProductModel — отвечает за управление каталогом товаров;
-   - BasketModel — отвечает за управление корзиной покупок;
+   - CardModel - отвечает за управление корзиной покупок;
+   - OrderModel - оформление и валидация заказов; 
 
 2. Представления (View) — визуализация пользовёательского интерфейса:
-   - MainPageView — главная страница приложения с галереей товаров, где пользователи могут просматривать и выбирать интересующие их продукты;
-   - ProductCard — универсальный компонент для отображения карточек товаров;
-   - BasketView — отображает содержимое корзины покупок, включая список товаров, их количество и общую стоимость, а также предоставляет возможность оформления заказа;
+   - PageView — главная страница приложения с галереей товаров, где пользователи могут просматривать и выбирать интересующие их продукты;
+   - CardViews - отображение корзины покупок в интерфейсе;
+   - ContactForm - отвечает за форму контанктных данных при оформлении заказа;
+   - FormPayment - отвечает за форму выбора способа оплаты и адреса доставки в процессе офофрмления заказа;
+   - Forms - абстрактный класс для работы с формами, который реализует общую логику для всех форм приложения;
+   - Modal - управление модальными окнами в интерфейсе;
+   - ProductCard - создание и отображение карточек товаров;
+   - SuccessModal - отображение модального окна с подтверждением успешного оформления заказа;
 
 3. Презентер (EventEmitter) — координация взаимодействия между слоями:
    - EventEmitter — связующее звено между моделью и представлением, которое обрабатывает события и передает данные между ними;
@@ -38,6 +44,8 @@
 - src/ — исходные файлы проекта
 - src/components/ — папка с JS компонентами
 - src/components/base/ — папка с базовым кодом
+- src/components/models/ — бизнес-логика и данные
+- src/components/views/ — отображение интерфейса
 
 ## Важные файлы:
 - src/pages/index.html — HTML-файл главной страницы
@@ -47,343 +55,478 @@
 - src/utils/constants.ts — файл с константами
 - src/utils/utils.ts — файл с утилитами
 
-## Описание базовых классов
+## Описание классов и их функциональность
 
 ### Класс Api.
 Базовый HTTP-клиент для взаимодействия с серверным API. Инкапсулирует логику выполнения запросов, обработки ответов и ошибок.
 
-1. Конструктор : 
+1. Типы :
+    - ApiListResponce<Type> :
+         {
+            total: number;    
+            items: Type[];   
+        }
+    - ApiPostMethods :
+     Поддерживаемые методы для модифицирующих запросов: 'POST' | 'PUT' | 'DELETE';
+
+2. Конструктор : 
     constructor(
         baseUrl: string,  // базовый URL API-сервера
         options: RequestInit = {} // стандарртные настройки HTTP-запросов
     )
 
-2. Основные методы : 
+3. Основные методы : 
 
-    1. handleResponse(response: Response): Promise<any> :
+    1. handleResponse(response: Response): Promise<object>:
         - Централизованный обработчик всех ответов сервера;
         - Проверяет статус ответа;
         - Обрабатывает сетевые ошибки и проблемы с парсингом;
         - Возвращает унифицированный формат данных для всего приложения;
     
-    2. get(endpoint: string, params?: Record<string, any>, options?: RequestInit): Promise<any> :
+    2. get<T>(uri: string): Promise<T>:
         - Выполняет GET-запрос к указанному эндпоинту;
         - Параметры :
-            * endpoint - путь API;
-            * params - query-параметры;
-            * options - дополнительные настройки запроса;
-        - Особенности :
-            * Автоматически добавляет базовый URL;
-            * Поддерживает кастомные заголовки;
-            * Обрабатывает все типы ошибок;
-
-    3. post(endpoint: string, body: any, options?: RequestInit): Promise<any> :
+            * uri — путь запроса;
+    3. post(uri: string, data: object, method: ApiPostMethods = 'POST'): Promise<object>:
         - Выполняет POST-запрос с передачей данных;
         - Пареметры :
-            * endpoint - путь API;
-            * body - данные для отправки;
-            * options - дополнительные настройки;
-
-### Класс Model<T>.
-Базовый абстрактный класс для всех моделей данных в приложении. Реализует общую логику работы с данными и событиями. Использует дженерик для строгой типизации структуры данных модели.
-
-1. Конструктор :
-    constructor(
-        data: Partial<T>,  // начальные данные модели
-        protected events: IEvents // экземпляр системы событий 
-    )
-
-2. Основные методы :
-    1. emitChanges(event: string, payload?: any): void :
-        - Уведомляет об изменении в модели; 
+            * uri - путь запроса;
+            * data - тело запроса;
+            * method - HTTP-метод;
 
 ### Класс EventEmitter.
-Реализация паттерна "Наблюдатель" (Observer) для управления событиями в приложении. Централизованный механизм для публикации событий и подписки на них, обеспечивающий слабую связность между компонентами системы.
+    Реализация паттерна "Наблюдатель" (Observer) для управления событиями в приложении. 
 
 1. Конструктор : 
     constructor() // не требует параметров для создания экземпляра
 
 2. Основные методы :
-    - on(event: string, callback: (data?: any) => void): void :
-        * Регистрирует обработчик для указанного события;
+    1. on<T = unknown>(event: string, callback: (data: T) => void): () => void:
+        * Подписывает обработчик на указанное событие;
         - Параметры :
             * event - имя события;
             * callback - функция-обработчик, получающая данные события;
-    - off(event: string, callback: (data?: any) => void): void : 
-        * удаляет конктретный обработчик для указанногот времени;
-        * возвращает ошибку если обрабочик не был зарегестрирован; 
-    - emit(event: string, data?: any): void :
+        - Возвращает функцию для отписки от события;
+    2. off<T = unknown>(event: string, callback: (data: T) => void): void: 
+        * Описывает конкретный обработчик от указанного события;
+        - Параметры: 
+            * event - название события;
+            * callback - функция-обработчик, которую нужно удалить;
+    3. emit<T = unknown>(event: string, data?: T): void:
         * Инициирует указанное событие;
         - Параметры :
             * event - имя события;
             * data - дополнительные данные для передачи обработчикам
-    - onAll(callback: (event: string, data?: any) => void): void :
-        * Регистрирует глобальный обработчик для всех событий;
-        * Получает имя события и данные в параметрах;
-        * Полезен для логирования или  отладки; 
-    - offAll(): void : 
-        * Сбрасывает глобальные обработчики;
-    - trigger(event: string): () => void : 
-        * При вызове этой функции инициируется указанное событие;
+    4. once<T = unknown>(event: string, callback: (data: T) => void): void:
+        * Подписывает обработчик на событие, который автоматически отписывается после первого вызова;
+            - Параметры: 
+                * event - название события;
+                * callback - функция-обработчик;
+    5. getEventListeners(event?: string): Record<string, number> | number: 
+        * Возвращает количество подписчиков на события;
+            - Параметры :
+                * event - название события;
+            - Возвращает : 
+                * Если передан event - количество обработчиков для этого события;
+                * Если не передан - объект с количеством подписчиков для всех событий;
+    6. clear(event?: string): void: 
+        * Очищает подписки на события;
+            - Параметры:
+                * event - название события, если не указано, очищаются все подписки;
 
-### Класс Component<T>.
-Предоставляет общие методы для работы с DOM и управления состоянием элементов интерфейса. Использует дженерик для типизации данных компонента. 
+### Класс CartModel.
+Модель корзины товаров, реализующая паттерн "Наблюдатель" через наследование от EventEmitter. Управляет состоянием корзины, включая добавление/удаление товаров, подсчет стоимости и количества. 
 
-1. Конструктор :
-    constructor(protected readonly container: HTMLElement // корневой DOM-элемент, контейнер для компонента
-    )
+1. Наследование и инициализация :
+    - Наследует EventEmitter;
+    - Приватные поля: private _items: ProductCart[] = [];
 
-2. Основные методы :
-    - toggleClass(element: HTMLElement, className: string, force?: boolean): void :
-        * element - целевой DOM-элемент;
-        * className - имя класса для переключения;
-        * force - необязательный флаг для добавления/удаления класса; 
-    - setText(element: HTMLElement | null, value: string): void :
-        * Устанавливает текстовое содержимое элемента ;
-        * Безопасно обрабатывает случаи, когда элемент не найден;
-        * Автоматически экранирует специальные символы;
-    - setDisabled(element: HTMLElement, state: boolean): void:
-        * Управляет состоянием disable элемента;
-        * Работает с формами, кнопками и др интерективными элементами;
-    - setHidden(element: HTMLElement): void и setVisible(element: HTMLElement): void :
-        * Управляет видимостью через display: none;
-        * Сохраняют оригинальное значение display при показе элемента;
-    - setImage(element: HTMLImageElement, src: string, alt?: string): void :
-        * Устанавливает изображение с обработкой ошибок загрузки;
-    - render(data?: Partial<T>): HTMLElement : 
-        * Отвечает за обновление DOM при изменении данных; 
-        * Возвращает корневой элемент компонента;
-
-## Слой модели данных Model.
-### Класс AppState.
-Централизованный хранитель состояния приложения, наследуемый от Model<IAppState>. Управляет всеми критически важными данными приложения: каталогом товаров, корзиной, оформлением заказа и ошибками валидации. Реализует бизнес-логику на уровне данных.
-
-1. Конструктор : не переопределен.
-
-2. Структура данных :
-    {
-    catalog: IProduct[];         // Полный список товаров магазина
-    basket: IProduct[];          // Товары в корзине (с дубликатами)
-    order: IOrder;               // Данные оформляемого заказа
-    preview: string | null;      // ID товара в режиме предпросмотра
-    formErrors: FormErrors;      // Ошибки валидации форм (ключ-значение)
-    }
-
-3. Методы :
-    1. Управление каталогом :
-        - setCatalog(items: IProduct[]) - полное обновление каталога;
-        - setPreview(item: IProduct) - установка товара для предпросмотра;
-    2. Работа с корзиной : 
-        - addToBasket(item: IProduct) - добавление товара с проверкой наличия;
-        - deleteFromBasket(item: IProduct) - удаление одного экземпляра товара;
-        - deleteAllFromBasket() - полная очистка корзины;
-        - getBasketAmount() → number - подсчет общего количества позиций;
-        - getBasketTotal() → number - расчет итоговой суммы с акциями;
-    3. Оформление заказа :
-        - setOrderField(field, value) - установка полей доставки/оплаты;
-        - setContactsField(field, value) - установка контактных данных;
-        - resetOrder() - сброс всех данных заказа;
-    4. Валидация :
-        - validateOrder() → boolean - проверка обязательных полей доставки;
-        - validateContacts() → boolean - валидация; 
-
-## Слой представления View. 
-### Класс Page.
-Базовый контейнер приложения, наследуемый от Component<IPage>. Управляет основными структурными элементами страницы: отображением каталога товаров, индикатором корзины и состоянием блокировки интерфейса. Служит точкой интеграции для основных модулей приложения.
-
-1. Конструктор :
-    constructor(
-        container: HTMLElement,  // корневой DOM-элемент страницы
-        protected events: IEvents // система событий для межкомпонентного взаимодействия
-    )
-
-2. Интерфейс управления состоянием :
-    - set counter(value: number) :
-        * Обновляет счетчик товаров в корзине;
-        * Автоматически скрывает индификатор при нулевом значении;
-        * Поддерживает анимацию изменения значения;
-    - set catalog(items: HTMLElement[]) :
-        * Рендерит массив карточек товаров в каталоге;
-        * Поддерживает ленивуюзагрузку изображений, постепенное появление элементов, обработку пустого состояния каталога;
-    - set locked(value: boolean) :
-        * Устанавливает состояние блокировки страницы;
-
-### Класс Modal. 
-Универсальный компонент для работы с модальными окнами, наследуемый от Component<IModalData>. Обеспечивает отображение различного контента во всплывающем окне с базовой функциональностью открытия/закрытия. 
-
-1. Конструктор :
-    constructor(
-        container: HTMLElement, // корневой элемент модального окна
-        protected events: IEvents // система событий для взаимодействия с др компонентами
-    )
-
-2. Основные методы :
-    - set content(value: HTMLElement) :
-        * Заменяет текущий конктент модального окна;
-        * Очищает предыдущее содержимое;
-    - open() :
-        * Актививрует модальное окно
-    - close() :
-        * Деактивирует модальное окно;
-        * Автоматически сбрасывает контент;   
-    - render(data: IModalData) :
-        * Комплексное обновление модального окна;
-
-### Класс Basket. 
-Компонент управления корзиной товаров(отображение списка добавленных товаров, взаимодействие с другими компонентами через систему событий)
-
-1. Конструктор :
-    constructor(
-        container: HTMLElement, 
-        protected events: IEvents
-    )
-
-2. Основные методы :
-    - updateButtonState(isActive: boolean): void :
-        * Автоматически вызывается при изменении суммы заказа;
-
-3. Сеттеры :
-    - set price(total: number): void :
-        * Обновляет отображение общей суммы;
-        * Автоматически  вызывает updateButtonState;
-    - set items(items: HTMLElement[]): void :
-        * Обновляет список товаров в интерфейсе;
-        * Синхронизируется с системой событий;
-
-### Класс Success.
-Компонент для отображения экрана успешного завершения заказа.
-
-1. Структура :
-    {
-        _close: HTMLElement;      // Кнопка закрытия/подтверждения
-        _totalPrice: HTMLElement; // Блок с отображением итоговой суммы
-        events: IEvents;          // Система обработки событий
+2. Конструктор :
+    constructor() {
+        super();  
+        this.emitChange(); 
     }
 
 2. Основные методы :
-    - set total(value: string | number) :
-        * Устанавливает итоговую сумму заказа;
-    - set onClose(callback: () => void) :
-        * Настраивает обработчик закрытия;
+    1.  addToCart(product: IProduct): void:
+    - Добавляет товар в корзину или увеличивает его количество;
+        * Проверяет валидность товара;
+        * Если товар в корзине - увеличивает quanity на 1, в противном случае добавляет новый элемент с quanity = 1;
+        * Автоматически уведомляет подписчиков через emitChange(); 
+    2. removeFromCart(productId: string): void:
+    - Удаляет товар из корзины по ID;
+        * Фильтрует массив _items, исключая товар с указанным productId;
+    3. clearCart(): void:
+        * Полностью очищает корзину;
+    4. getCartState(): BasketStatus:
+        * Возвращет текущее состояние корзины:
+        {
+            items: ProductCart[],   
+            totalPrice: number,  
+            totalItems: number 
+        }
+    5. isProductValid(product: IProduct): boolean:
+        * Проверяет, что товар можно добавить в корзину: return product.price != null; 
+    6. findCartItem(productId: string): ProductCart | undefined: 
+        * Находит товар в корзине по ID: return this._items.find(item => item.product.id === productId); 
+    7. getItemsCopy(): ProductCart[]:
+        * Создает глубокую копию списка товаров: return this._items.map(item => ({...item,product: { ...item.product }}));
+    8. calculateTotalPrice(): number :
+        * Считает общую стоимость: this._items.reduce((total, item)=> total + (item.product.price || 0) * item.quantity, 0);
+    9. calculateTotalItems(): number:
+        * Считает общее количество товаров: this._items.reduce((total, item) => total + item.quantity, 0);
+    10. emitChange(): void :
+        * Отправляет событие cart-change с текущим состоянием корзины: this.emit('cart-change', this.getCartState());
 
-### Класс OrderForm.
-1. Поля :
-    - form: HTMLFormElement - форма заказа;
-    - paymentButtons: HTMLButtonElement[] - кнопки выбора способы оплаты;
-    - addressInput: HTMLInputElement — поле ввода адреса;
-    - submitButton: HTMLButtonElement — кнопка отправки заказа
+### Класс OrderModel.
+Модель оформления заказа, реализующая паттерн "Наблюдатель" через наследование от EventEmitter. Отвечает за валидацию данных заказа и взаимодействие с API для его отправки.
 
-2. Методы:
-    - render(data: OrderPayment) — отрисовывает форму с переданными данными;
-    - setErrors(errors: ValidationErrors) — отображает ошибки валидации
+1. Наследование и инициализация:
+    - Наследует EventEmitter;
 
-3. Обработчики событий :
-    - click на paymentButtons — выбор способа оплаты;
-    - input на addressInput — ввод адреса;
-    - submit формы — отправка данных заказа;
+2. Конструктор : 
+    - constructor(private api: Api)
 
-### Класс ContactsForm.
-1. Поля:
-    - form: HTMLFormElement — форма контактов;
-    - emailInput: HTMLInputElement — поле ввода email;
-    - phoneInput: HTMLInputElement — поле ввода телефона;
-    - submitButton: HTMLButtonElement — кнопка отправки;
-2. Методы :
-    - render(data: Contacts) — отображает форму с переданными контактными данными;
-    - setErrors(errors: ValidationErrors) — выводит ошибки валидации;
-3. Обработчики событий :
-    - input на полях формы (emailInput, phoneInput) — обработка вводимых данных
-    - submit формы — отправка данных;
+3. Основные методы :
+    1. submitOrder(order: Order): Promise<void> :
+        * Отправляет заказ на сервер и уведомляет о результате;
+        - Использует api.post с эндпоинтом /order;
+    2. validateOrder(order: Partial<Order>): boolean: 
+        * Проверяет корректность данных заказа. Возвращает true , если все поля валидны.
+        - Проверяемые поля: 
+            1. address:
+                - Условия валидности: не пустая строка;
+                - Ошибка : Некорректный адрес доставки;
+            2. paument:
+                - Условия валидности: 'cash' или 'card';
+                - Ошибка : Некорректный способ оплаты;
+            3. email:
+                - Условия валидности: соответсвует шаблону email;
+                - Ошибка : Некорректный email;
+            3. phone:
+                - Условия валидности: 11+ цифр;
+                - Ошибка : Некорректный телефон;
+            3. items:
+                - Условия валидности: не пустой массив;
+                - Ошибка : Корзина пуста;
+            3. total:
+                - Условия валидности: число > 0;
+                - Ошибка : Некорректная сумма заказа;
 
-## Слой коммуникации.
-### Класс AppApi.
-Специализированный API-клиент для работы с backend-сервисом, расширяющий базовый функционал класса Api. Обеспечивает взаимодействие с API, включая работу с товарами и оформление заказов.
+4. События:
+    1. order : success : срабатывает при устпешной отправке заказа;
+    2. order : error : срабатывает при ошибке API;
 
-1. Конструктор : 
+
+### Класс ProductModel.
+Модель данных для работы с продуктами, реализующая паттерн "Наблюдатель" через наследование от EventEmitter. Обеспечивает загрузку товаров с сервера, их хранение и предоставление по запросу.
+
+
+1. Наследование и инициализация: 
+    - Наследует EventEmitter; 
+    - Приватные поля : private products: IProduct[] = []; private api: Api;  
+
+2. Конструктор :
+    constructor(api: Api) {
+     super();
+     this.api = api;  // Инъекция зависимости API-клиента
+    }
+
+3. Основные методы:
+    1. fetchProducts(): Promise<void> :
+        - Загружает список товаров с сервера и обновляет локальное хранилище;
+        - Использует api.get с эндпоинтов product;
+        - Ожидает ответ в формате ApiList<any>;
+        - Приводит структуру товаров к единому формату IProduct;
+        - При успехе генерирует событие products-updated с массивом товаров, в противном случае products-error с объектом ошибки;
+    2. getProductById(id: string): IProduct | undefined:
+        - Возвращает товар по ID из локального кеша: return this.products.find(product => product.id === id);
+        - Возвращает IProduct если товар найден, в противном случае undefined;
+    3. getAllProducts(): IProduct[]:
+        - Возвращает копию массива всех загруженных товаров: return [...this.products];
+
+4. События :
+    1. products-updated : срабатывает при успешной загрузке товаров;
+    2. products-error : срабатывает при ошибке загрузки;
+
+### Класс CardViews. 
+Компонент для отображения корзины товаров и управления UI элементами. Реализует рендеринг списка товаров, обновление счетчика и обработку пользовательских действий.
+
+1. Конструктор :
     constructor(
-        baseUrl: string, 
-        cdn: string, options?: RequestInit
+        private eventEmitter: EventEmitter, 
+        private onRemove: (product: IProduct) => void 
     )
 
+2. DOM-элементы:
+    private readonly template: HTMLTemplateElement;
+    private readonly cardTemplate: HTMLTemplateElement; 
+    private readonly basketButton: HTMLElement;
+    private readonly basketCounter: HTMLElement;
+
 2. Основные методы :
-    - getProducts(): Promise<IProduct[]> : 
-        * Получает полный каталог товаров с сервера;
-        * Возвращает массив объектов товаров с преобразованными URL-изображений;
-        * Обрабатывает случаи пустого каталога, ошибок загрузки, неверного формата данных;
-    - getProductById(id: string): Promise<IProduct> :
-        * Запрашивает детальную информацию о конкретном товаре ;
-        * id - уникальный идентификатор товара;
-    - postOrder(order: ICustomer): Promise<TSuccessData> :
-        * Отправляет данные на сервер;
-        * Обрабатывает различные статусы ответа;
+    1. render(state: BasketStatus): HTMLElement:
+        - Генерирует и возвращает HTML корзине на основе текущего состояния;
+        - Обновление счетчика: this.updateCounter(state.items.length);
+        - Общая сумма: total.textContent = `${state.totalPrice} синапсов`;
+    2. private updateCounter(count: number): void:
+        * Обновляет отображение счетчика товаров;
+
+3. Обработка событий :
+    1. basketButton :
+        - Событие : click;
+        - Действие: генерирует cart:open;
+    1. Кнопка удаления :
+        - Событие : click;
+        - Действие: вызывает onRemove с товаром;
+    1. Кнопка оформления :
+        - Событие : click;
+        - Действие: генерирует order:submit;
+        
+### Класс ContactForm. 
+Наследник класса Forms, реализующий форму контактов с валидацией email и телефона. Обеспечивает маску ввода для телефона и динамическую проверку данных.
+
+1. Конструктор :
+    constructor(onSubmit: (data: { email: string; phone: string }) => void) {
+        super('contacts', onSubmit);  // Инициализация базовой формы с id 'contacts'
+    }
+
+2. Основные методы :
+    1. validate(): boolean:
+        - Проверяет коректность введеных данных;
+    2. handleSubmit(e: Event): void:
+        - Обрабатывает отправку формы;
+    3. render(): HTMLFormElement :
+        - Генерирует и возвращает DOM-элемент формы;
+        - Добавялет обработчики :
+            1. phoneInput :
+                - Событие: input;
+                - Действие: применяет маску телефона;
+            2. emailInput :
+                - Событие: input;
+                - Действие: запускает валидацию;
+            3. Форма:
+                - Событие: submit;
+                - Действие: вызывает handleSubmit;
+
+### Класс FormPayment.
+Наследник класса Forms, реализующий форму выбора способа оплаты и ввода адреса доставки. Обеспечивает валидацию данных и обработку пользовательских действий.
+
+1. Наследование и инициализация :
+    - Наследует Forms;
+    - Поля :
+    protected paymentButtons: HTMLButtonElement[]; 
+    protected addressInput: HTMLInputElement;    
+
+2. Конструктор:
+    constructor(onSubmit: (data: { payment: string; address: string }) => void) {
+        super('order', onSubmit);
+    }
+
+2. Основные методы :
+    1. validate(): boolean:
+        - Проверяет коректность введеных данных;
+    2. handleSubmit(e: Event): void:
+        - Обрабатывает отправку формы;
+    3. render(): HTMLFormElement :
+        - Генерирует и возвращает DOM-элемент формы;
+        - Добавляет обработчики:
+            1. paymentButtons :
+                - Событие: click;
+                - Действие : выбор способа оплаты;
+            1. addressInput :
+                - Событие: input;
+                - Действие : запускате валидацию;
+            1. Форма :
+                - Событие: submit;
+                - Действие : вызывает handleSubmit;
     
 
-## Взаимодействие компонентов.
-   - products:changed - обновление каталога;
-   - preview:changed - просмотр товара;
-   - modal:open/close - открытие/закрытие модального окна;
-   - basket:changed - изменение корзины:
-   - product:select, basket:open — действия;
-   - order:changed — изменение данных заказа;
-   - formErrors:changed — изменение ошибок валидации;
-   
+### Класс Forms.
+Абстрактный базовый класс для создания форм с общей логикой валидации, отправки данных и отображения ошибок. Реализует паттерн "Шаблонный метод", оставляя конкретную реализацию валидации наследникам.
+
+1. Структура :
+    1. form: 
+        - Тип: HTMLFormElement;
+        - Описание: DOM-элемент формы;
+    1. button: 
+        - Тип: HTMLButtonElement;
+        - Описание: кнопка отправки формы;
+    1. errors: 
+        - Тип: HTMLElement;
+        - Описание: контейнер для отображения ошибок;
+    1. formId: 
+        - Тип: string;
+        - Описание: ID шаблон формы в DOM;
+    1. onSubmit: 
+        - Тип: (data: object) => void;
+        - Описание: колбэк для обработки данных формы;
+
+2. Конструктор:
+    constructor(formId: string, onSubmit: (data: object) => void)
+
+3. Основные методы:
+    1. render(): HTMLFormElement :
+        - Создает и возвращает клон формы с настроенными обработчиками, использует FormData для сбора значений полей формы = конвертирует в обычный объект;
+    2. showErrors(errors: string[]): void: 
+        - Отображет ошибки валидации;
+    3. clearErrors(): void :
+        - Очищает блок с ошибками;
+    4. protected abstract validate(): boolean :
+        - Обязательный к реализации метод: должен содержать логику проверки данных формы, возвращать true если данные валидны, использовать showErrors() для отображения ошибок;
+        - Вызывается в render() перед отправкой данных;
+
+### Класс Modal.
+Управление модальными окнами с функциональностью открытия/закрытия, обработкой событий и сохранением состояния формы. 
+
+1. Конструктор:
+        constructor()
+
+2. Структура класса :
+    1. element :
+        - Тип: HTMLElement;
+        - Описание: основной контейнер модального окна;
+    2. content :
+        - Тип: HTMLElement;
+        - Описание: блок для контента модалки;
+    3. closeButton :
+        - Тип: HTMLElement;
+        - Описание: кнопка закрытия;
+    4. escHandler :
+        - Тип: HTMLElement;
+        - Описание: основной контейнер модального окна;
+    5. element :
+        - Тип: (e: KeyboardEvent) => void;
+        - Описание: обработчик клавиши ESC;
+    6. pageWrapper :
+        - Тип: HTMLElement;
+        - Описание: блок страницы для управления прокруткой;
+
+3. Основные методы:
+    1. open(content: HTMLElement): void :
+        - Открывает модально окно с переданным контентом;
+        - Блокирует прокрутку страницы;
+        - Обрабатывает контент;
+        - Активирует модальное окно;
+    2. close(): void:
+        - Закрывает модально окно;
+    3. getContent(): HTMLElement :
+        - Возвращает текущий контейнер контента;
+    4. private getScrollbarWidth(): number :
+        - Вычисляет ширину скроллбара браузера;
+    5. private setupEventListeners(): void :
+        - Устанавливает обработчики событий;
+    6. private handleEscape(e: KeyboardEvent): void:
+        - Обрабатывает нажатие esc -> закрытие модального окна;
+
+### Класс PageView.
+Представление главной страницы приложения, управляющее отображением галереи товаров и индикатором корзины. Реализует взаимодействие через EventEmitter.
+
+1. Конструктор : 
+    constructor(eventEmitter: EventEmitter)
+
+2. Структура и инициализация: 
+    1. gallery :
+        - Тип: HTMLElement;
+        - Описание: контейнер доя отображения товаров;
+    2. basketButton :
+        - Тип: HTMLElement;
+        - Описание: кнопка корзины в хедере;
+    3. basketCounter :
+        - Тип: HTMLElement;
+        - Описание: счетчик товаров в корзине;
+    4. eventEmitter :
+        - Тип: EventEmitter;
+        - Описание: обработчик событий;
+
+2. Основные методы :
+    1. renderGallery(items: HTMLElement[]): void:
+        - Очищает содержимое галереи товаров;
+    2. updateBasketCounter(count: number): void :
+        - Обновляет отображение счетчика товаров;
+        - this.basketCounter.style.display = count > 0 ? 'flex' : 'none';
+
+### Класс ProductCard.
+Компонент для создания карточек товаров с поддержкой разных вариантов отображения (основной и превью). Обеспечивает единообразное отображение товаров с учетом их категорий.
+
+1. Конструктор:
+    constructor(template: HTMLTemplateElement, onClick: (productId: string) => void)
+
+2. Структура и инициализация:
+    1. template:
+        - Тип: HTMLTemplateElement;
+        - Описание: шаблон для создания карточек;
+    2. onClick :
+        - Тип: (productId: string) => void;
+        - Описание: колбэк при клике на карточку;
+
+3. Основные методы:
+    1. private getCategoryClass(category: string): string:
+        - Определяет CSS-класс для категории товара;
+    2. render(product: IProduct): HTMLElement:
+        - Создает DOM-элемент карточки товара;
+    3. renderPreview(product: IProduct): HTMLElement :
+        - Создает DOM-элемент превью карточки;
+
+### Класс ProductCard.
+Компонент для отображения модального окна успешного оформления заказа. Реализует простой механизм рендеринга и обработки закрытия. 
+
+1. Конструктор: 
+    constructor(onClose: () => void)
+
+2. Основной метод:
+    1. render(totalPrice: number): HTMLElement:
+        - Создает и возвращает DOM-элемент модального окна;
 
 ## Типы данных
-
-### Карточки
-  interface IProductItem {
-  id: string;
-  name: string;
-  price: number;
-  description: string;
-  category: string;
-  image: string;
+### Карта товара
+interface IProduct {
+  id: string;                   
+  title: string;                
+  price: number;                
+  description: string;          
+  category: string;             
+  image: string;                
 }
 
-### Заказ
-  interface IOrder {
-  payment: string;
-  address: string;
-  email: string;
-  phone: string;
-}
+### Товар в корзине
+interface ProductCart {
+  product: IProduct;             
+  quantity: number;             
+ }
 
-### Подтверждение заказа
-  interface OrderConfirmation {
-  id: string;
-  total: number;
-}
+### Состояние корзины
+interface BasketStatus {
+  items: ProductCart[];             
+  totalPrice: number;  
+  totalItems: number;        
+  }
 
-### Данные карточки 
-  interface IProductData {
-  cards: IProductItem[];
-  preview: string | null;
-}
+### Данные при оформлении заказа 
+interface Order {
+  address: string;     
+  payment: string;              
+  email: string;         
+  phone: string;           
+  items: string[];        
+  total: number;           
+  }
 
-### Карточка на главной странице 
-    type CatalogItem = Omit<ProductItem, 'description'>;
+### Для отправки формы оплаты 
+interface FormPayments {
+  payment: string;             
+  address: string;              
+  }
 
-### Карточка в корзине 
-    type BasketItem = Pick<IProductItem, 'id' | 'name' | 'price'>;
+### Для данных формы контактов 
+export interface ContactsForm {
+  email: string;             
+  phone: string;               
+  }
 
-### Данные в корзине
-   type BasketItem {
-   id: string;
-   title: string;
-   price: number | null;
-}
 
-### Способ оплаты 
-    type Payment = 'card' | 'cash' | '';
-
-### Форма оплаты и адреса
-    type OrderPayment = Pick<IOrder, 'payment' | 'address'>;
-
-### Контактная информация 
-    type Contacts = Pick<IOrder, 'email' | 'phone'>;
-
-### Валидация
-    type ValidationErrors = Partial<Record<keyof IOrder, string>>;
+## UML
+![UML](src/docs/UMl.drawio.svg)
 
 ## Установка и запуск
 Для установки и запуска проекта необходимо выполнить команды
