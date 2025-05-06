@@ -7,7 +7,7 @@ import { CartModel } from './components/models/CartModel';
 import { OrderModel } from './components/models/OrderModel';
 import { ProductCard } from './components/views/ProductCard';
 import { Modal } from './components/views/Modal';
-import { CardViews } from './components/views/CardViews';
+import { CartViews } from './components/views/CartViews';
 import { FormPayment } from './components/views/FormPayment';
 import { ContactForm } from './components/views/ContactForm';
 import { SuccessModal } from './components/views/SuccessModal';
@@ -22,7 +22,7 @@ const orderModel = new OrderModel(api);
 const modal = new Modal();
 const page = new PageView(eventEmitter); 
 
-const cartView = new CardViews(eventEmitter, (product: IProduct) => {
+const cartView = new CartViews(eventEmitter, (product: IProduct) => {
     cartModel.removeFromCart(product.id);
 });
 
@@ -47,18 +47,57 @@ productModel.on('products-updated', (products: IProduct[]) => {
     page.renderGallery(cards); 
 });
 
+// Общая функция создания элемента корзины
+const createBasketItem = (item: { product: IProduct }, index: number, onRemove: (id: string) => void): HTMLElement => {
+    const itemElement = document.createElement('div');
+    itemElement.className = 'basket__item';
+
+    const indexSpan = document.createElement('span');
+    indexSpan.className = 'basket__item-index';
+    indexSpan.textContent = (index + 1).toString();
+    itemElement.appendChild(indexSpan);
+
+    const title = document.createElement('h3');
+    title.className = 'card__title';
+    title.textContent = item.product.title;
+    itemElement.appendChild(title);
+
+    const price = document.createElement('p');
+    price.className = 'card__price';
+    price.textContent = item.product.price ? `${item.product.price} синапсов` : 'Бесценно';
+    itemElement.appendChild(price);
+
+    const deleteButton = document.createElement('button');
+    deleteButton.className = 'basket__item-delete';
+    deleteButton.textContent = 'Удалить';
+    deleteButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        onRemove(item.product.id);
+    });
+    itemElement.appendChild(deleteButton);
+
+    return itemElement;
+};
+
 // При изменении корзины
 cartModel.on('cart-change', (state: BasketStatus) => {
-    page.updateBasketCounter(state.items.length); 
-    const basketContent = modal.getContent().querySelector('.basket');
-    if (basketContent) {
-        modal.open(cartView.render(state));
-    }
+    page.updateBasketCounter(state.items.length);
+    
+    // Генерация карточек корзины
+    const basketCards = state.items.map((item, index) => 
+        createBasketItem(item, index, (id) => cartModel.removeFromCart(id))
+    );
+    
+    modal.open(cartView.render(state));
 });
 
 // Открытие корзины
 eventEmitter.on('cart:open', () => {
-    modal.open(cartView.render(cartModel.getCartState()));
+    const state = cartModel.getCartState();
+    const basketCards = state.items.map((item, index) => 
+        createBasketItem(item, index, (id) => cartModel.removeFromCart(id))
+    );
+    modal.open(cartView.render(state));
 });
 
 // Обработка оформления заказа

@@ -2,110 +2,93 @@ import { IProduct } from '../../types';
 import { CDN_URL } from '../../utils/constants';
 
 export class ProductCard {
-	constructor(
-		private template: HTMLTemplateElement,
-		private onClick: (productId: string) => void
-	) {}
+    constructor(
+        private template: HTMLTemplateElement,
+        private onClick: (productId: string) => void
+    ) {}
 
-	private getCategoryClass(category: string): string {
-		const normalizedCategory = category.toLowerCase().trim();
+    private getCategoryClass(category: string): string {
+        const categoryMap: Record<string, string> = {
+            'софт-скил': 'card__category_soft',
+            'хард-скил': 'card__category_hard',
+            'дополнительное': 'card__category_additional',
+            'кнопка': 'card__category_button',
+            'другое': 'card__category_other',
 
-		switch (normalizedCategory) {
-			case 'софт-скил':
-			case 'soft-skill':
-				return 'card__category_soft';
-			case 'хард-скил':
-			case 'hard-skill':
-				return 'card__category_hard';
-			case 'другое':
-			case 'other':
-				return 'card__category_other';
-			case 'дополнительное':
-			case 'additional':
-				return 'card__category_additional';
-			case 'кнопка':
-			case 'button':
-				return 'card__category_button';
-			default:
-				return 'card__category_other';
-		}
-	}
+            'soft-skill': 'card__category_soft',
+            'hard-skill': 'card__category_hard',
+            'additional': 'card__category_additional',
+            'button': 'card__category_button',
+            'other': 'card__category_other'
+        };
 
-	render(product: IProduct): HTMLElement {
-		const card = this.template.content.firstElementChild!.cloneNode(true) as HTMLElement;
-		
-		const titleElement = card.querySelector('.card__title');
-		if (titleElement) {
-			titleElement.textContent = product.title || product.title || 'Без названия';
-		}
+        return categoryMap[category.toLowerCase()] || 'card__category_other';
+    }
 
-		const categoryElement = card.querySelector('.card__category');
-		if (categoryElement) {
-			categoryElement.textContent = product.category;
-			categoryElement.classList.add(this.getCategoryClass(product.category));
-		}
+    private setElementText(element: Element | null, text: string): void {
+        if (element) {
+            element.textContent = text;
+        }
+    }
 
-		const priceElement = card.querySelector('.card__price');
-		if (priceElement) {
-			priceElement.textContent = product.price ? `${product.price} синапсов` : 'Бесценно';
-		}
+    private setImage(element: HTMLImageElement | null, src: string, alt: string): void {
+        if (element) {
+            element.src = src.startsWith('http') ? src : `${CDN_URL}${src}`;
+            element.alt = alt;
+        }
+    }
 
-		const image = card.querySelector('.card__image') as HTMLImageElement;
-		if (image) {
-			image.src = product.image.startsWith('http') ? product.image : `${CDN_URL}${product.image}`;
-			image.alt = product.title || product.title || '';
-		}
+    render(product: IProduct): HTMLElement {
+        const card = this.template.content.firstElementChild!.cloneNode(true) as HTMLElement;
+        
+        // Устанавливаем базовые свойства
+        this.setElementText(card.querySelector('.card__title'), product.title || 'Без названия');
+        this.setElementText(card.querySelector('.card__price'), 
+            product.price ? `${product.price} синапсов` : 'Бесценно');
+        this.setImage(card.querySelector('.card__image'), product.image, product.title || '');
 
-		card.addEventListener('click', () => {
-			this.onClick(product.id);
-		});
+        // Обработка категории
+        const categoryElement = card.querySelector('.card__category');
+        if (categoryElement) {
+            this.setElementText(categoryElement, product.category);
+            categoryElement.className = 'card__category'; // Сбрасываем классы
+            categoryElement.classList.add(this.getCategoryClass(product.category));
+        }
 
-		return card;
-	}
+        // Обработчик клика
+        card.addEventListener('click', () => {
+            this.onClick(product.id);
+        });
 
-	renderPreview(product: IProduct): HTMLElement {
-		const template = document.querySelector('#card-preview') as HTMLTemplateElement;
-		const card = template.content.firstElementChild!.cloneNode(true) as HTMLElement;
+        return card;
+    }
 
-		const productName = product.title || product.title || 'Без названия';
+    renderPreview(product: IProduct): HTMLElement {
+        const template = document.querySelector('#card-preview') as HTMLTemplateElement;
+        const card = template.content.firstElementChild!.cloneNode(true) as HTMLElement;
 
-		const titleElement = card.querySelector('.card__title');
-		if (titleElement) {
-			titleElement.textContent = productName;
-		}
+        // Устанавливаем базовые свойства
+        const productName = product.title || 'Без названия';
+        this.setElementText(card.querySelector('.card__title'), productName);
+        this.setElementText(card.querySelector('.card__text'), product.description || '');
+        this.setElementText(card.querySelector('.card__price'), 
+            product.price ? `${product.price} синапсов` : 'Бесценно');
+        this.setImage(card.querySelector('.card__image'), product.image, productName);
 
-		const categoryElement = card.querySelector('.card__category');
-		if (categoryElement) {
-			const categoryClass = this.getCategoryClass(product.category);
-			categoryElement.classList.add(categoryClass);
-			categoryElement.textContent = product.category;
-		}
+        // Обработка категории
+        const categoryElement = card.querySelector('.card__category');
+        if (categoryElement) {
+            this.setElementText(categoryElement, product.category);
+            categoryElement.className = 'card__category'; // Сбрасываем классы
+            categoryElement.classList.add(this.getCategoryClass(product.category));
+        }
 
-		const textElement = card.querySelector('.card__text');
-		if (textElement) {
-			textElement.textContent = product.description;
-		}
+        // Удаляем кнопку для бесценных товаров
+        if (product.price === null) {
+            const buyButton = card.querySelector('.card__button');
+            buyButton?.remove();
+        }
 
-		const priceElement = card.querySelector('.card__price');
-		if (priceElement) {
-			priceElement.textContent = product.price ? `${product.price} синапсов` : 'Бесценно';
-		}
-
-		const image = card.querySelector('.card__image') as HTMLImageElement;
-		if (image) {
-			image.src = product.image.startsWith('http') ? product.image : `${CDN_URL}${product.image}`;
-			image.alt = productName;
-		}
-
-		// Удаляем кнопку "В корзину" для бесценных товаров
-		if (product.price === null) {
-			const cardRow = card.querySelector('.card__row');
-			const buyButton = cardRow?.querySelector('.card__button');
-			if (buyButton) {
-				buyButton.remove();
-			}
-		}
-
-		return card;
-	}
+        return card;
+    }
 }

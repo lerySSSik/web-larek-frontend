@@ -1,7 +1,7 @@
-import { IProduct, BasketStatus } from '../../types';
+import { BasketStatus, IProduct } from '../../types';
 import { EventEmitter } from '../base/event';
 
-export class CardViews {
+export class CartViews {
     private readonly template: HTMLTemplateElement;
     private readonly cardTemplate: HTMLTemplateElement;
     private readonly basketButton: HTMLElement;
